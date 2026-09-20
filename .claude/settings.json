@@ -1,0 +1,15 @@
+{
+  "$comment": "Kinetiq v5 Claude Code operating layer. Minimal, safe defaults. The verifier subagents in .claude/agents are read-only (no Edit/Write) by tool restriction in their own frontmatter; this allowlist just spares the common read/verify/test commands a prompt each. Adjust in the target repo as needed.",
+  "permissions": {
+    "allow": [
+      "Bash(python evals/gate0/prototype_api/verify_deploy.py:*)",
+      "Bash(python evals/gate0/prototype_api/check_local.sh:*)",
+      "Bash(python evals/gate0/aggregate.py:*)",
+      "Bash(python -m unittest*)",
+      "Bash(node --test*)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ]
+  }
+}

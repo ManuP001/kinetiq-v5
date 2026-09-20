@@ -77,6 +77,69 @@ No test was weakened, skipped, or edited; no threshold was touched.
 
 ---
 
+## [v5 Phase 2] — 2026-09-21 — the prototype runs locally, verified from the browser's vantage point
+
+No code changed. This phase is evidence, not edits.
+
+### Verified — local run
+`evals/gate0/prototype_api/run_local.ps1` started the detector API on :8000 (CWD `evals/gate0`, so
+`import gate_config` / `detector.*` resolve) and the PWA static server on :8080, with
+`PROTOTYPE_API_CORS_ORIGINS` set to both the `localhost` and `127.0.0.1` forms.
+
+`python evals/gate0/prototype_api/verify_deploy.py http://127.0.0.1:8000 --origin http://localhost:8080`
+→ **ALL 8 CHECKS PASSED**, exit 0:
+
+    deployed version : dev
+    session_max_frames: 3600
+
+    GET /health = 200 ok                           PASS
+    /health CORS header present                    PASS
+    POST /assess (real frame) = 200                PASS
+    /assess success CORS header present            PASS
+    /assess response has rep_count                 PASS
+    bad frame -> 422 (not 500/no-response)         PASS
+    error response STILL carries CORS              PASS
+    error names the reason (detail)                PASS
+
+The last three are the ones that matter most: the exact failure mode from the "Failed to fetch"
+postmortem — an error losing its cause at the boundary — is demonstrably not present. A deliberately
+broken frame returns a named 422 that still carries its CORS header, not a CORS-less 500.
+
+`POST /assess` returning 200 **with a `rep_count`** means the carried-over detector actually loaded
+and ran; a green `/health` alone would not have shown that.
+
+### Verified — independent deployment-verifier subagent
+Run in-repo against the same target. Verdict: **SAFE for local development use**. It confirmed the
+`version: dev` value is correct rather than stale — `prototype_api/main.py:174` reads
+`os.environ.get("KINETIQ_VERSION", "dev")`, and nothing stamps it locally.
+
+### Explicitly NOT verified
+- **The on-phone smoke test in a clean/Incognito profile on the canonical URL (no `?cb=`) is still
+  owed.** Nothing in this phase substitutes for it.
+- Service workers, mixed content, and `getUserMedia` are invisible to this check. `localhost` is a
+  privileged secure context, so a local camera pass would prove nothing about a phone.
+- The PWA page itself on :8080 was not loaded; only the API was exercised.
+- **No human has completed a real set in front of the camera.** That remains true.
+
+### Known gap surfaced (not fixed)
+`KINETIQ_VERSION` is not wired to the git SHA. Until it is, `/health`'s version line carries no
+evidence about which code is live, and deploy verification ships without its staleness detector.
+Harmless locally; must be fixed before the first real deploy (`docs/NEXT_VERSION.md` §2 already
+lists it).
+
+### Cross-check — dangling references
+All six named artifacts resolve in v5: `DESIGN.md`, `frontend/severities.json`,
+`frontend/segments.js`, `frontend/config.js`, `evals/gate0/prototype_api/verify_deploy.py`,
+`evals/gate0/aggregate.py`.
+
+Seven `docs/*.md` targets referenced by carried files do **not** exist in v5's `docs/`:
+`DEPLOY_RUNBOOK`, `POSTMORTEM_FAILED_TO_FETCH`, `GOLDEN_SET_PROTOCOL`, `EVAL_HARNESS_STAGE0_SPEC`,
+`EVAL_STRATEGY`, `NEXT_VERSION_PRINCIPLES`, `ROADMAP`. All seven live in `../kinetiq v4/docs/`,
+which v5's `CLAUDE.md` §0 already names as the deeper source of truth. Reported, not fixed — a doc
+change belongs in its own plan.
+
+---
+
 ## v4 history (carried over)
 
 ## [Unreleased] — 2026-09-20 — you can now test what you deployed

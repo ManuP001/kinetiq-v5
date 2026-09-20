@@ -171,7 +171,10 @@ def health() -> Dict[str, Any]:
         # (Render: an env var wired to the commit) so "is the new code actually live?" is one
         # request, not a hunt through file contents -- the exact question that cost days in
         # docs/POSTMORTEM_FAILED_TO_FETCH.md. "dev" locally, where no build stamped it.
-        "version": os.environ.get("KINETIQ_VERSION", "dev"),
+        # Render auto-populates RENDER_GIT_COMMIT with the deployed commit, so a hosted
+        # service reports its real SHA with no wiring. An explicit KINETIQ_VERSION still
+        # overrides (any other host, or a manual stamp). "dev" only when neither is set.
+        "version": os.environ.get("KINETIQ_VERSION") or os.environ.get("RENDER_GIT_COMMIT", "dev"),
         "supported_exercises": SUPPORTED_EXERCISES,
         # Published so the PWA can roll to a fresh session BEFORE this cap rather than
         # discovering it as an unrecoverable 413 -- and reads it from here instead of

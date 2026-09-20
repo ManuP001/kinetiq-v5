@@ -5,9 +5,12 @@
 // Local run (run_local): the API is same-host on :8000.
 // Render/Cloudflare: set this to the deployed API origin (https://<api>.onrender.com), no trailing slash.
 window.KINETIQ_CONFIG = {
-  // Empty string => same origin as the page + ":8000" is NOT assumed; we default to localhost:8000
-  // for the local run. Overwrite with the full https origin for a deployed API.
-  API_BASE_URL: "https://kinetiq-v4-api.onrender.com",
+  // unset — set to the deployed v5 API origin via set-api-url.ps1 during deploy wiring.
+  // Empty is DELIBERATE: if the PWA is ever deployed unwired, every call becomes a
+  // same-origin request to the static host, which 404s, and the app's API-unreachable
+  // state shows plainly. Pointing at a stale origin instead would silently talk to the
+  // wrong backend and look fine.
+  API_BASE_URL: "",
 
   // How often we flush buffered keypoint frames to the detector API (ms). The API recomputes over
   // the whole buffer each call, so this trades latency against request volume. 400ms matches the

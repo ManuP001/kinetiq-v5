@@ -5,9 +5,11 @@ separately -- these tests are about the HTTP contract around it."""
 from __future__ import annotations
 
 import json
+import os
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -46,6 +48,16 @@ class TestHealth(PrototypeApiTestCase):
         body = self.client.get("/health").json()
         self.assertIn("version", body)
         self.assertTrue(body["version"])
+
+    def test_health_falls_back_to_render_git_commit(self):
+        # Render auto-populates RENDER_GIT_COMMIT. Without this fallback a real deploy reports
+        # "dev" and the version line carries no evidence about WHICH code is live -- the exact
+        # question that cost six days in docs/ERRORS_AND_LESSONS.md. An explicit KINETIQ_VERSION
+        # still wins; this only covers the Render case where it is unset.
+        with mock.patch.dict(os.environ, {"RENDER_GIT_COMMIT": "deadbee"}, clear=False):
+            os.environ.pop("KINETIQ_VERSION", None)
+            body = self.client.get("/health").json()
+        self.assertEqual(body["version"], "deadbee")
 
     def test_health_needs_no_request_body(self):
         # a plain GET, no auth, no CORS preflight needed for a same-origin/curl/manual-navigation

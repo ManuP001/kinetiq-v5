@@ -140,6 +140,62 @@ change belongs in its own plan.
 
 ---
 
+## [v5 Phase 3] — 2026-09-21 — ready to deploy: v5 service names, a real version SHA, no stale API URL
+
+Three fixes that unblock a fully hosted deploy (PWA + API both on Render). **GATE G-REAL holds** —
+no detector logic, no threshold, no exercise gating touched. The only behavioural code change is the
+`/health` version fallback.
+
+### Changed — `render.yaml` (FIX 1)
+- `kinetiq-v4-api` → **`kinetiq-v5-api`**; `kinetiq-v4-pwa` → **`kinetiq-v5-pwa`**; header and the
+  CORS example comment updated to v5.
+- Added **`numInstances: 1`** with a comment. Render's default is already 1, so nothing changes
+  today — it makes the constraint visible: sessions are in-memory (`SessionBufferStore`), so a
+  second instance would split one user's set across two buffers and break the rep count.
+- Unchanged and confirmed correct: `dockerfilePath ./evals/gate0/prototype_api/Dockerfile`,
+  `dockerContext .` (repo root — the detector's imports need `evals/gate0/`, `backend/app/core/`
+  and `exercises/` at their real relative layout), `healthCheckPath /health`,
+  `PROTOTYPE_API_CORS_ORIGINS` declared `sync: false`, static site publishing `./frontend`.
+  `plan: free` left as-is; the paid-tier call is a dashboard decision.
+
+### Fixed — `/health` version now reports the real commit (FIX 2)
+`evals/gate0/prototype_api/main.py`:
+
+    - "version": os.environ.get("KINETIQ_VERSION", "dev"),
+    + "version": os.environ.get("KINETIQ_VERSION") or os.environ.get("RENDER_GIT_COMMIT", "dev"),
+
+Render auto-populates `RENDER_GIT_COMMIT`, so a hosted service reports its real SHA with no wiring;
+an explicit `KINETIQ_VERSION` still overrides. Closes the gap surfaced in Phase 2: without this,
+`/health` reports `dev` on a real deploy and the version line carries **no evidence about which code
+is live** — the exact question that cost six days in `docs/ERRORS_AND_LESSONS.md`. Deploy
+verification would have shipped with its strongest staleness signal disabled.
+
+New test `test_health_falls_back_to_render_git_commit` in `prototype_api/test_main.py`: with
+`RENDER_GIT_COMMIT` set and `KINETIQ_VERSION` unset, `/health` reports that value. No hardcoded SHA
+— the fixture string is `deadbee`.
+
+### Fixed — the PWA no longer points at the v4 backend (FIX 3)
+`frontend/config.js` `API_BASE_URL` was `https://kinetiq-v4-api.onrender.com` — **the old v4 API**.
+Deployed as-is, the v5 PWA would have silently talked to v4 and looked like it worked. Now `""`,
+with the reason in a comment.
+
+Empty is deliberate, and verified rather than assumed: `app.js:20` does
+`CFG.API_BASE_URL.replace(/\/+$/, "")`, so `""` stays `""` and `fetch(\`${API}/health\`)` becomes
+`fetch("/health")` — a same-origin request to the static host, which 404s, so `pingHealth` returns
+false and the app's API-unreachable state shows plainly. A stale origin would have failed silently
+instead. `set-api-url.ps1`'s regex `API_BASE_URL:\s*"[^"]*"` matches the empty string (confirmed on
+a scratch copy), so deploy wiring rewrites it cleanly.
+
+### Verified — offline, no server started
+- `python -m unittest discover -s evals/gate0 -p "test_*.py"` → **Ran 316 tests … OK** (315 + FIX 2)
+- `python evals/gate0/aggregate.py --golden evals/gate0/golden --mode full` → **Stage 0 gate: PASS**, exit 0
+
+### Not verified
+Nothing here has been deployed. `verify_deploy.py` runs against the deployed URLs in the next step,
+and the clean/Incognito on-phone smoke test remains owed.
+
+---
+
 ## v4 history (carried over)
 
 ## [Unreleased] — 2026-09-20 — you can now test what you deployed

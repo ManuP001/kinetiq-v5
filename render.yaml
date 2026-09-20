@@ -1,4 +1,4 @@
-# Render Blueprint for the Kinetiq v4 monorepo — BOTH services in one file.
+# Render Blueprint for the Kinetiq v5 monorepo — BOTH services in one file.
 # Render auto-detects this at the repo root when you connect the repo as a "Blueprint".
 #
 # See docs/DEPLOY_RUNBOOK.md for the ordered wiring steps (they're chicken-and-egg: each service
@@ -8,23 +8,27 @@ services:
   #    explains why: the detector's imports need evals/gate0/, backend/app/core/, exercises/ at
   #    their real relative layout). No pose runtime in this image — it scores keypoints only.
   - type: web
-    name: kinetiq-v4-api
+    name: kinetiq-v5-api
     runtime: docker
     dockerfilePath: ./evals/gate0/prototype_api/Dockerfile
     dockerContext: .
     plan: free
+    # Sessions are in-memory (SessionBufferStore). More than one instance would split a single
+    # user's set across two buffers and break the rep count. Render defaults to 1; pinned so it
+    # stays that way.
+    numInstances: 1
     healthCheckPath: /health
     envVars:
       - key: PROTOTYPE_API_CORS_ORIGINS
         sync: false
         # Set in the dashboard to the PWA's exact deployed HTTPS origin (below), e.g.
-        # https://kinetiq-v4-pwa.onrender.com — NOT "*", no trailing slash, no path.
+        # https://kinetiq-v5-pwa.onrender.com — NOT "*", no trailing slash, no path.
 
   # 2) Camera PWA — static site. No build step; just serve frontend/. Static sites don't spin down.
   #    Before deploying, point frontend/config.js API_BASE_URL at the API URL from service 1
   #    (frontend/set-api-url.ps1 does this), commit, then deploy.
   - type: web
-    name: kinetiq-v4-pwa
+    name: kinetiq-v5-pwa
     runtime: static
     staticPublishPath: ./frontend
     buildCommand: ""

@@ -10,7 +10,7 @@ window.KINETIQ_CONFIG = {
   // same-origin request to the static host, which 404s, and the app's API-unreachable
   // state shows plainly. Pointing at a stale origin instead would silently talk to the
   // wrong backend and look fine.
-  API_BASE_URL: "",
+  API_BASE_URL: "https://kinetiq-v5-api.onrender.com",
 
   // How often we flush buffered keypoint frames to the detector API (ms). The API recomputes over
   // the whole buffer each call, so this trades latency against request volume. 400ms matches the
